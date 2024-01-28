@@ -1,6 +1,7 @@
 import cv2
 import mediapipe as mp
 import pyautogui as pygui
+import math
 
 # Initialize Mediapipe Hands
 mp_drawing = mp.solutions.drawing_utils
