@@ -2,6 +2,11 @@
 
 **Note: This implementation has only been tested on MacOS and may not work on Windows/Linux systems.**
 
+## How to use
+
+* To perform a left click, tap your thumb and index finger while keeping your middle finger pointing up.
+* For a right click, tap your thumb and middle finger while keeping your index finger pointing up.
+  
 ## Requirements
 
 * **Python 3.11** _(This version is required by Mediapipe)_
