@@ -4,6 +4,8 @@
 
 ## How to use
 
+* Put your hand infront of your Webcam
+
 * To perform a left click, tap your thumb and index finger while keeping your middle finger pointing up.
 * For a right click, tap your thumb and middle finger while keeping your index finger pointing up.
   
