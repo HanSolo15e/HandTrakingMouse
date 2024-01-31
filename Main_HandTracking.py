@@ -11,7 +11,7 @@ mp_hands = mp.solutions.hands
 SCREEN_WIDTH, SCREEN_HEIGHT = pygui.size()
 
 # Constants
-NUM_POSITIONS = 10
+NUM_POSITIONS = 10  
 Mouse_state = 0
 
 # Mouse Sensitivity
@@ -88,9 +88,14 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7) a
                     print(ix, iy)
 
                     if dis_point1 < 4.5 and dis_point2 > 10:
-                        pygui.leftClick(_pause=False)
-                        Mouse_state = 1
-                        pygui.moveTo(avg_x, avg_y, _pause=False)
+
+                        if Mouse_state == 1:
+                            Mouse_state = 1
+                            pygui.moveTo(avg_x, avg_y, _pause=False)
+                        else:
+                            pygui.leftClick(_pause=False)
+                            Mouse_state = 1
+                            pygui.moveTo(avg_x, avg_y, _pause=False)
                     elif dis_point3 < 4.5 and dis_point1 > 1:
                         pygui.rightClick(_pause=False)
                         Mouse_state = 2
