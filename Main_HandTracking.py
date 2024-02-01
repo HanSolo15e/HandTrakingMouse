@@ -22,7 +22,14 @@ print("HEY! it started!")
 
 # Opens the webcam, input 1 is not always the webcam, if it is not, the project will not launch
 # you might need to play with the value to find your webcam of choice
-cap = cv2.VideoCapture(2)
+is_macos = True  # Change this based on your platform detection logic
+if is_macos:
+    # For macOS, use AVFoundation for video capture
+    cap = cv2.VideoCapture(cv2.CAP_AVFOUNDATION + 1)
+else:
+    # For other platforms like Windows, use the default capture device
+    cap = cv2.VideoCapture(1)
+
 
 # Define Distance calculation
 def distance_3d(point1, point2):
