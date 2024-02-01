@@ -22,7 +22,7 @@ print("HEY! it started!")
 
 # Opens the webcam, input 1 is not always the webcam, if it is not, the project will not launch
 # you might need to play with the value to find your webcam of choice
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(2)
 
 # Define Distance calculation
 def distance_3d(point1, point2):
@@ -85,7 +85,7 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7) a
                     avg_x = sum(pos[0] for pos in positions) / len(positions)
                     avg_y = sum(pos[1] for pos in positions) / len(positions)
 
-                    print(ix, iy)
+                    ##print(ix, iy)
 
                     if dis_point1 < 4.5 and dis_point2 > 10:
 
