@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import pyautogui as pygui
 import math
+import numpy as np
 
 # Initialize Mediapipe Hands
 mp_drawing = mp.solutions.drawing_utils
@@ -33,12 +34,13 @@ else:
 
 # Define Distance calculation
 def distance_3d(point1, point2):
-    x1, y1, z1 = point1
-    x2, y2, z2 = point2
-    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
+    point1_np = np.array(point1)
+    point2_np = np.array(point2)
+    return np.linalg.norm(point2_np - point1_np)
+
 
 # Settings for hand detection
-with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7) as hands:
+with mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.6) as hands:
     positions = []
     while cap.isOpened():
         ret, frame = cap.read()
@@ -61,7 +63,6 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7) a
                     index_tip = hand_landmarks.landmark[8]
                     thumb_tip = hand_landmarks.landmark[4]
                     middle_tip = hand_landmarks.landmark[12]
-                    pinky_tip = hand_landmarks.landmark[12]
                     hand_root = hand_landmarks.landmark[9]
 
                     dis_point1 = distance_3d((index_tip.x, index_tip.y, index_tip.z),
@@ -90,13 +91,13 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7) a
                     if len(positions) > NUM_POSITIONS:
                         positions.pop(0)
 
-                    avg_x = sum(pos[0] for pos in positions) / len(positions)
-                    avg_y = sum(pos[1] for pos in positions) / len(positions)
+                    avg_x, avg_y = np.mean(positions, axis=0)
 
                     ##print(ix, iy)
 
-                    if dis_point1 < 4.5 and dis_point2 > 10:
 
+                    if dis_point1 < 4.5 and dis_point2 > 10:
+                        
                         if Mouse_state == 1:
                             Mouse_state = 1
                             pygui.moveTo(avg_x, avg_y, _pause=False)
@@ -105,6 +106,7 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7) a
                             Mouse_state = 1
                             pygui.moveTo(avg_x, avg_y, _pause=False)
                     elif dis_point3 < 4.5 and dis_point1 > 1:
+                        
                         if Mouse_state == 2:
                             Mouse_state = 2
                             pygui.moveTo(avg_x, avg_y, _pause=False)
@@ -114,6 +116,7 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7) a
                             pygui.moveTo(avg_x, avg_y, _pause=False)
                     else:
                         Mouse_state = 0
+                        
                         pygui.moveTo(avg_x, avg_y, _pause=False)
 
                     mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS,
