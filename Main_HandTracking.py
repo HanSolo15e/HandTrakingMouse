@@ -108,7 +108,7 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7) a
                             Mouse_state = 2
                             pygui.moveTo(avg_x, avg_y, _pause=False)
                         else:
-                            pygui.rightClickClick(_pause=False)
+                            pygui.rightClick(_pause=False)
                             Mouse_state = 2
                             pygui.moveTo(avg_x, avg_y, _pause=False)
                     else:
