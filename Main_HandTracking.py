@@ -57,6 +57,7 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7) a
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
                 if len(hand_landmarks.landmark) >= 21:
+
                     index_tip = hand_landmarks.landmark[8]
                     thumb_tip = hand_landmarks.landmark[4]
                     middle_tip = hand_landmarks.landmark[12]
@@ -126,7 +127,7 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7) a
                     cv2.putText(image, text_screen, Text_pos, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
                                 cv2.LINE_AA)
 
-        cv2.imshow("Evan's Fabulous Hand Tracking For Mac", image)
+        cv2.imshow("Evan's Fabulous Hand Tracking", image)
 
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
