@@ -104,9 +104,13 @@ with mp_hands.Hands(min_detection_confidence=0.8, min_tracking_confidence=0.7) a
                             Mouse_state = 1
                             pygui.moveTo(avg_x, avg_y, _pause=False)
                     elif dis_point3 < 4.5 and dis_point1 > 1:
-                        pygui.rightClick(_pause=False)
-                        Mouse_state = 2
-                        pygui.moveTo(avg_x, avg_y, _pause=False)
+                        if Mouse_state == 2:
+                            Mouse_state = 2
+                            pygui.moveTo(avg_x, avg_y, _pause=False)
+                        else:
+                            pygui.rightClickClick(_pause=False)
+                            Mouse_state = 2
+                            pygui.moveTo(avg_x, avg_y, _pause=False)
                     else:
                         Mouse_state = 0
                         pygui.moveTo(avg_x, avg_y, _pause=False)
