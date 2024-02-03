@@ -34,5 +34,13 @@ To change the sensitivity of the mouse, modify the multiplication factor for mou
 X_multi = 1.5
 Y_multi = 1.5
 ```
+Limit the number of hands that can be traked at one time:
+```python
+# set how manny hands it can detect at one time
+# (More hands can somewhat effect performance)
+Num_of_hands = 1
+Num_of_hands = 1
+```
+
 
 Adjust these settings as necessary to optimize the performance of the hand tracking and mouse control functionality.
