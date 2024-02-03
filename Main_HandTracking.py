@@ -19,6 +19,9 @@ Mouse_state = 0
 X_multi = 1.5
 Y_multi = 1.5
 
+# set how manny hands it can detect at one time
+Num_of_hands = 1
+
 print("HEY! it started!")
 
 # Opens the webcam, input 1 is not always the webcam, if it is not, the project will not launch
@@ -38,9 +41,13 @@ def distance_3d(point1, point2):
     point2_np = np.array(point2)
     return np.linalg.norm(point2_np - point1_np)
 
+def distance_2d(point1, point2):
+    point1_np = np.array(point1)
+    point2_np = np.array(point2)
+    return math.dist(point2_np, point1_np)
 
 # Settings for hand detection
-with mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.6) as hands:
+with mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.6, max_num_hands=Num_of_hands) as hands:
     positions = []
     while cap.isOpened():
         ret, frame = cap.read()
@@ -64,6 +71,7 @@ with mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.6) a
                     thumb_tip = hand_landmarks.landmark[4]
                     middle_tip = hand_landmarks.landmark[12]
                     hand_root = hand_landmarks.landmark[9]
+                    hand_root_2 = hand_landmarks.landmark[13]
 
                     dis_point1 = distance_3d((index_tip.x, index_tip.y, index_tip.z),
                                               (thumb_tip.x, thumb_tip.y, thumb_tip.z)) * 100
@@ -71,20 +79,31 @@ with mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.6) a
                                               (middle_tip.x, middle_tip.y, middle_tip.z)) * 100
                     dis_point3 = distance_3d((middle_tip.x, middle_tip.y, middle_tip.z),
                                               (thumb_tip.x, thumb_tip.y, thumb_tip.z)) * 100
+                    
 
-                    # Initial calculations
-                    ix, iy = (hand_root.x * SCREEN_WIDTH), (hand_root.y * SCREEN_HEIGHT)
+                    # Convert to screen space
+                    Hand_Root_Scr_x, Hand_Root_Scr_y = (hand_root.x * SCREEN_WIDTH), (hand_root.y * SCREEN_HEIGHT)
+                    ##Hand_Root2_Scr_x, Hand_Root2_Scr_y2= (hand_root_2.x * SCREEN_WIDTH), (hand_root_2.y * SCREEN_HEIGHT)
+
+                    ##dis_point_2D = distance_2d((Hand_Root_Scr_x, Hand_Root_Scr_y),(Hand_Root2_Scr_x, Hand_Root2_Scr_y2))
+
+                    ##print(dis_point_2D)
+
+                    # check if hand is not pointing at camera 
+                    ##if dis_point_2D < 20:
+                        
 
                     # Translation to center the coordinates around (0, 0)
                     # and apply mouse sensitivity
-                    ix_NRM = (ix - SCREEN_WIDTH/2) * X_multi
-                    iy_NRM = (SCREEN_HEIGHT/2 - iy) * Y_multi
+                    Hand_Root_Scr_xNRM = (Hand_Root_Scr_x - SCREEN_WIDTH/2) * X_multi
+                    Hand_Root_Scr_yNRM = (SCREEN_HEIGHT/2 - Hand_Root_Scr_y) * Y_multi
 
                     # Translation back to original coordinate system
-                    ix = ix_NRM + SCREEN_WIDTH/2
-                    iy = SCREEN_HEIGHT/2 - iy_NRM
+                    Hand_Root_Scr_xMlt = Hand_Root_Scr_xNRM + SCREEN_WIDTH/2
+                    Hand_Root_Scr_yMlt = SCREEN_HEIGHT/2 - Hand_Root_Scr_yNRM
 
-                    Mouse_pos = [ix, iy]
+                    # Makes mouse movement smooth
+                    Mouse_pos = [Hand_Root_Scr_xMlt, Hand_Root_Scr_yMlt]
                     current_position = Mouse_pos
                     positions.append(current_position)
 
@@ -95,7 +114,7 @@ with mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.6) a
 
                     ##print(ix, iy)
 
-
+                    # Click detection
                     if dis_point1 < 4.5 and dis_point2 > 10:
                         
                         if Mouse_state == 1:
@@ -105,7 +124,7 @@ with mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.6) a
                             pygui.leftClick(_pause=False)
                             Mouse_state = 1
                             pygui.moveTo(avg_x, avg_y, _pause=False)
-                    elif dis_point3 < 4.5 and dis_point1 > 1:
+                    elif dis_point3 < 4.5 and dis_point1 > 5:
                         
                         if Mouse_state == 2:
                             Mouse_state = 2
@@ -119,6 +138,7 @@ with mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.6) a
                         
                         pygui.moveTo(avg_x, avg_y, _pause=False)
 
+                        # draws hand bones / render text
                     mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS,
                                               mp_drawing.DrawingSpec(color=(252, 123, 43), thickness=2,
                                                                      circle_radius=4),
@@ -126,7 +146,7 @@ with mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.6) a
                                                                      circle_radius=10))
                     text_screen = int(avg_x), int(avg_y)
                     text_screen = (str(text_screen) + "  " + str(Mouse_state))
-                    Text_pos = (int(hand_root.x * SCREEN_WIDTH), int(hand_root.y * SCREEN_HEIGHT))
+                    Text_pos = (int(Hand_Root_Scr_x), int(Hand_Root_Scr_y))
                     cv2.putText(image, text_screen, Text_pos, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
                                 cv2.LINE_AA)
 
