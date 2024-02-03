@@ -20,6 +20,7 @@ X_multi = 1.5
 Y_multi = 1.5
 
 # set how manny hands it can detect at one time
+# (More hands can somewhat effect performance)
 Num_of_hands = 1
 
 print("HEY! it started!")
