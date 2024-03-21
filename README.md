@@ -39,7 +39,6 @@ Limit the number of hands that can be traked at one time:
 # set how manny hands it can detect at one time
 # (More hands can somewhat effect performance)
 Num_of_hands = 1
-Num_of_hands = 1
 ```
 
 
