@@ -1,6 +1,7 @@
 # Control Your Mouse with Mediapipe Handtracking in Python
 
 **Note: This implementation has only been tested on MacOS and may not work on Windows/Linux systems.**
+**Note: Mediapipe has deprecated certain features needed for this so it may not work in newer versions.**
 
 ## How to use
 
