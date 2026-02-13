@@ -1,161 +1,143 @@
 import cv2
 import mediapipe as mp
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 import pyautogui as pygui
 import math
 import numpy as np
+import time
 
-# Initialize Mediapipe Hands
-mp_drawing = mp.solutions.drawing_utils
-mp_hands = mp.solutions.hands
-
-# Screen dimensions
+# --- INITIALIZATION & CONFIG ---
 SCREEN_WIDTH, SCREEN_HEIGHT = pygui.size()
-
-# Constants
 NUM_POSITIONS = 10  
 Mouse_state = 0
-
-# Mouse Sensitivity
 X_multi = 1.5
 Y_multi = 1.5
-
-# set how manny hands it can detect at one time
-# (More hands can somewhat effect performance)
 Num_of_hands = 1
+
+# Define Hand Connections manually (since mp.solutions is missing)
+HAND_CONNECTIONS = [
+    (0, 1), (1, 2), (2, 3), (3, 4),    # Thumb
+    (0, 5), (5, 6), (6, 7), (7, 8),    # Index
+    (5, 9), (9, 10), (10, 11), (11, 12), # Middle
+    (9, 13), (13, 14), (14, 15), (15, 16), # Ring
+    (13, 17), (17, 18), (18, 19), (19, 20), (0, 17) # Pinky/Palm
+]
+
+# 1. Setup MediaPipe Tasks Detector
+base_options = python.BaseOptions(model_asset_path='hand_landmarker.task')
+options = vision.HandLandmarkerOptions(
+    base_options=base_options,
+    num_hands=Num_of_hands,
+    running_mode=vision.RunningMode.VIDEO
+)
+detector = vision.HandLandmarker.create_from_options(options)
 
 print("HEY! it started!")
 
-# Opens the webcam, input 1 is not always the webcam, if it is not, the project will not launch
-# you might need to play with the value to find your webcam of choice
-is_macos = True  # Change this based on your platform detection logic
+# 2. Camera Setup (macOS specific)
+is_macos = True 
 if is_macos:
-    # For macOS, use AVFoundation for video capture
-    cap = cv2.VideoCapture(cv2.CAP_AVFOUNDATION + 1)
+    # Use +0 if +1 doesn't work; CAP_AVFOUNDATION is best for Macs
+    cap = cv2.VideoCapture(cv2.CAP_AVFOUNDATION + 0)
 else:
-    # For other platforms like Windows, use the default capture device
-    cap = cv2.VideoCapture(1)
+    cap = cv2.VideoCapture(0)
 
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
 
-# Define Distance calculation
-def distance_3d(point1, point2):
-    point1_np = np.array(point1)
-    point2_np = np.array(point2)
-    return np.linalg.norm(point2_np - point1_np)
+# Helper for 3D distance
+def distance_3d(p1, p2):
+    return math.sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2 + (p1.z - p2.z)**2)
 
-def distance_2d(point1, point2):
-    point1_np = np.array(point1)
-    point2_np = np.array(point2)
-    return math.dist(point2_np, point1_np)
+positions = []
 
-# Settings for hand detection
-with mp_hands.Hands(min_detection_confidence=0.6, min_tracking_confidence=0.6, max_num_hands=Num_of_hands) as hands:
-    positions = []
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
+# --- MAIN LOOP ---
+while cap.isOpened():
+    success, frame = cap.read()
+    if not success:
+        print("Ignoring empty camera frame.")
+        continue
 
-        frame = cv2.flip(frame, 1)
-        frame = cv2.resize(frame, (640, 480))
-        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    # Mirror and Resize
+    frame = cv2.flip(frame, 1)
+    h, w, _ = frame.shape # Original camera resolution
+    
+    # MediaPipe requires RGB and a specific Image object
+    rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
+    
+    # Detection (requires a millisecond timestamp)
+    frame_timestamp_ms = int(time.time() * 1000)
+    results = detector.detect_for_video(mp_image, frame_timestamp_ms)
 
-        results = hands.process(image)
+    # Process Results
+    if results.hand_landmarks:
+        # We only care about the first hand detected
+        hand_landmarks = results.hand_landmarks[0]
+        
+        # Grab specific tips for mouse logic
+        thumb_tip = hand_landmarks[4]
+        index_tip = hand_landmarks[8]
+        middle_tip = hand_landmarks[12]
+        hand_root = hand_landmarks[9] # Using landmark 9 (middle finger root) for tracking
 
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-        image = cv2.resize(image, (SCREEN_WIDTH, SCREEN_HEIGHT))
+        # Logic Distances
+        dis_point1 = distance_3d(index_tip, thumb_tip) * 100
+        dis_point2 = distance_3d(index_tip, middle_tip) * 100
+        dis_point3 = distance_3d(middle_tip, thumb_tip) * 100
 
-        if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
-                if len(hand_landmarks.landmark) >= 21:
+        # Screen Space Translation with Sensitivity
+        Hand_Root_Scr_x = hand_root.x * SCREEN_WIDTH
+        Hand_Root_Scr_y = hand_root.y * SCREEN_HEIGHT
 
-                    index_tip = hand_landmarks.landmark[8]
-                    thumb_tip = hand_landmarks.landmark[4]
-                    middle_tip = hand_landmarks.landmark[12]
-                    hand_root = hand_landmarks.landmark[9]
-                    hand_root_2 = hand_landmarks.landmark[13]
+        Hand_Root_Scr_xNRM = (Hand_Root_Scr_x - SCREEN_WIDTH/2) * X_multi
+        Hand_Root_Scr_yNRM = (SCREEN_HEIGHT/2 - Hand_Root_Scr_y) * Y_multi
 
-                    dis_point1 = distance_3d((index_tip.x, index_tip.y, index_tip.z),
-                                              (thumb_tip.x, thumb_tip.y, thumb_tip.z)) * 100
-                    dis_point2 = distance_3d((index_tip.x, index_tip.y, index_tip.z),
-                                              (middle_tip.x, middle_tip.y, middle_tip.z)) * 100
-                    dis_point3 = distance_3d((middle_tip.x, middle_tip.y, middle_tip.z),
-                                              (thumb_tip.x, thumb_tip.y, thumb_tip.z)) * 100
-                    
+        raw_x = Hand_Root_Scr_xNRM + SCREEN_WIDTH/2
+        raw_y = SCREEN_HEIGHT/2 - Hand_Root_Scr_yNRM
 
-                    # Convert to screen space
-                    Hand_Root_Scr_x, Hand_Root_Scr_y = (hand_root.x * SCREEN_WIDTH), (hand_root.y * SCREEN_HEIGHT)
-                    ##Hand_Root2_Scr_x, Hand_Root2_Scr_y2= (hand_root_2.x * SCREEN_WIDTH), (hand_root_2.y * SCREEN_HEIGHT)
+        # Smoothing Logic
+        positions.append((raw_x, raw_y))
+        if len(positions) > NUM_POSITIONS:
+            positions.pop(0)
+        
+        avg_x, avg_y = np.mean(positions, axis=0)
 
-                    ##dis_point_2D = distance_2d((Hand_Root_Scr_x, Hand_Root_Scr_y),(Hand_Root2_Scr_x, Hand_Root2_Scr_y2))
+        # Click detection & Cursor Movement
+        if dis_point1 < 4.5 and dis_point2 > 10: # Left Click (Index + Thumb)
+            if Mouse_state != 1:
+                pygui.leftClick(_pause=False)
+                Mouse_state = 1
+        elif dis_point3 < 4.5 and dis_point1 > 5: # Right Click (Middle + Thumb)
+            if Mouse_state != 2:
+                pygui.rightClick(_pause=False)
+                Mouse_state = 2
+        else:
+            Mouse_state = 0
+        
+        pygui.moveTo(avg_x, avg_y, _pause=False)
 
-                    ##print(dis_point_2D)
+        # --- DRAWING (Manual OpenCV fallback for drawing_utils) ---
+        # Draw connections (Skeleton)
+        for connection in HAND_CONNECTIONS:
+            p1 = hand_landmarks[connection[0]]
+            p2 = hand_landmarks[connection[1]]
+            cv2.line(frame, (int(p1.x * w), int(p1.y * h)), 
+                     (int(p2.x * w), int(p2.y * h)), (58, 145, 89), 2)
 
-                    # check if hand is not pointing at camera 
-                    ##if dis_point_2D < 20:
-                        
+        # Draw dots (Landmarks)
+        for lm in hand_landmarks:
+            cv2.circle(frame, (int(lm.x * w), int(lm.y * h)), 5, (252, 123, 43), -1)
 
-                    # Translation to center the coordinates around (0, 0)
-                    # and apply mouse sensitivity
-                    Hand_Root_Scr_xNRM = (Hand_Root_Scr_x - SCREEN_WIDTH/2) * X_multi
-                    Hand_Root_Scr_yNRM = (SCREEN_HEIGHT/2 - Hand_Root_Scr_y) * Y_multi
+        # Visual Feedback Text
+        status_text = f"Pos: {int(avg_x)}, {int(avg_y)} | State: {Mouse_state}"
+        cv2.putText(frame, status_text, (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-                    # Translation back to original coordinate system
-                    Hand_Root_Scr_xMlt = Hand_Root_Scr_xNRM + SCREEN_WIDTH/2
-                    Hand_Root_Scr_yMlt = SCREEN_HEIGHT/2 - Hand_Root_Scr_yNRM
+    cv2.imshow("Evan's Fabulous Hand Tracking", frame)
 
-                    # Makes mouse movement smooth
-                    Mouse_pos = [Hand_Root_Scr_xMlt, Hand_Root_Scr_yMlt]
-                    current_position = Mouse_pos
-                    positions.append(current_position)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
-                    if len(positions) > NUM_POSITIONS:
-                        positions.pop(0)
-
-                    avg_x, avg_y = np.mean(positions, axis=0)
-
-                    ##print(ix, iy)
-
-                    # Click detection
-                    if dis_point1 < 4.5 and dis_point2 > 10:
-                        
-                        if Mouse_state == 1:
-                            Mouse_state = 1
-                            pygui.moveTo(avg_x, avg_y, _pause=False)
-                        else:
-                            pygui.leftClick(_pause=False)
-                            Mouse_state = 1
-                            pygui.moveTo(avg_x, avg_y, _pause=False)
-                    elif dis_point3 < 4.5 and dis_point1 > 5:
-                        
-                        if Mouse_state == 2:
-                            Mouse_state = 2
-                            pygui.moveTo(avg_x, avg_y, _pause=False)
-                        else:
-                            pygui.rightClick(_pause=False)
-                            Mouse_state = 2
-                            pygui.moveTo(avg_x, avg_y, _pause=False)
-                    else:
-                        Mouse_state = 0
-                        
-                        pygui.moveTo(avg_x, avg_y, _pause=False)
-
-                        # draws hand bones / render text
-                    mp_drawing.draw_landmarks(image, hand_landmarks, mp_hands.HAND_CONNECTIONS,
-                                              mp_drawing.DrawingSpec(color=(252, 123, 43), thickness=2,
-                                                                     circle_radius=4),
-                                              mp_drawing.DrawingSpec(color=(58, 145, 89), thickness=2,
-                                                                     circle_radius=10))
-                    text_screen = int(avg_x), int(avg_y)
-                    text_screen = (str(text_screen) + "  " + str(Mouse_state))
-                    Text_pos = (int(Hand_Root_Scr_x), int(Hand_Root_Scr_y))
-                    cv2.putText(image, text_screen, Text_pos, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2,
-                                cv2.LINE_AA)
-
-        cv2.imshow("Evan's Fabulous Hand Tracking", image)
-
-        if cv2.waitKey(10) & 0xFF == ord('q'):
-            break
-
-# Release the webcam and close all windows
 cap.release()
 cv2.destroyAllWindows()
