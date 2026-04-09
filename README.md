@@ -12,11 +12,11 @@
   
 ## Requirements
 
-* **Python 3.11** _(This version is required by Mediapipe)_
+* **Python 3.11** _(This version is required by Mediapipe, However as of 2026 newer versions may work)_
 
-* **OpenCV for Python 3.11**
+* **OpenCV for Python 3.11 (or same version)**
 
-* **PyAutoGUI for Python 3.11**
+* **PyAutoGUI for Python 3.11 (or same version)**
 
 ## Settings
 
